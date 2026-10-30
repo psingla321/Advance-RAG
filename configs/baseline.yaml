@@ -1,0 +1,42 @@
+# Naive RAG: fixed chunks, dense-only retrieval, no reranking. The control group.
+# Generated starting point - edit freely.
+
+name: baseline
+description: 'Naive RAG: fixed chunks, dense-only retrieval, no reranking. The control
+  group.'
+llm:
+  type: mock
+embedder:
+  type: hash
+  dim: 512
+vectorstore:
+  type: memory
+loader:
+  type: auto
+chunker:
+  type: fixed
+  size: 1000
+  overlap: 150
+transform:
+  type: identity
+retriever:
+  type: dense
+reranker:
+  type: identity
+compressor:
+  type: truncate
+generator:
+  type: stuff
+top_k: 10
+top_n: 5
+context_token_budget: 3000
+namespace: default
+min_score: 0.0
+abstain_when_empty: true
+guardrails: true
+cache: false
+cache_ttl_seconds: 3600
+verify: false
+verify_threshold: 0.8
+system_prompt: null
+metadata: {}

@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexus-rag"
+version = "1.0.0"
+description = "Nexus AI — agentic RAG engine and a plug-and-play RAG lab for data scientists."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "PyYAML>=6.0",
+]
+
+# Install only what you need: every backend is imported lazily.
+#   pip install -e "backend[local]"      local models, nothing leaves the machine
+#   pip install -e "backend[all]"        everything
+[project.optional-dependencies]
+notebook = ["pandas>=2.2", "jupyter>=1.0"]
+local = ["sentence-transformers>=3.0", "torch>=2.2"]
+openai = ["openai>=1.40"]
+azure = ["openai>=1.40", "azure-identity>=1.17"]
+anthropic = ["anthropic>=0.40"]
+cohere = ["cohere>=5.0"]
+stores = ["qdrant-client>=1.12", "chromadb>=0.5", "faiss-cpu>=1.8", "asyncpg>=0.29"]
+loaders = ["pypdf>=4.2", "python-docx>=1.1", "beautifulsoup4>=4.12", "python-pptx>=1.0", "openpyxl>=3.1"]
+tokenizers = ["tiktoken>=0.7"]
+all = [
+    "pandas>=2.2", "sentence-transformers>=3.0", "openai>=1.40", "azure-identity>=1.17",
+    "qdrant-client>=1.12", "chromadb>=0.5", "asyncpg>=0.29", "pypdf>=4.2", "python-docx>=1.1",
+    "beautifulsoup4>=4.12", "python-pptx>=1.0", "openpyxl>=3.1", "tiktoken>=0.7",
+]
+
+[project.scripts]
+nexus-rag = "app.rag.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

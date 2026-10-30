@@ -1,0 +1,56 @@
+# Everything on: query expansion, hybrid retrieval, cross-encoder rerank, self-critique.
+# Generated starting point - edit freely.
+
+name: advanced
+description: 'Everything on: query expansion, hybrid retrieval, cross-encoder rerank,
+  self-critique.'
+llm:
+  type: mock
+embedder:
+  type: hash
+  dim: 512
+vectorstore:
+  type: memory
+loader:
+  type: auto
+chunker:
+  type: parent_child
+  parent_tokens: 1200
+  child_tokens: 220
+transform:
+  type: chain
+  steps:
+  - type: rewrite
+  - type: multi_query
+    n: 3
+retriever:
+  type: parent_document
+  inner:
+    type: hybrid_rrf
+reranker:
+  type: chain
+  stages:
+  - reranker:
+      type: keyword_overlap
+    top_n: 20
+  - reranker:
+      type: cross_encoder
+compressor:
+  type: lost_in_middle
+generator:
+  type: self_rag
+  inner:
+    type: citation_strict
+top_k: 40
+top_n: 8
+context_token_budget: 3000
+namespace: default
+min_score: 0.0
+abstain_when_empty: true
+guardrails: true
+cache: false
+cache_ttl_seconds: 3600
+verify: true
+verify_threshold: 0.8
+system_prompt: null
+metadata: {}

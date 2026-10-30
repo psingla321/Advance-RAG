@@ -1,0 +1,2 @@
+[console_scripts]
+nexus-rag = app.rag.cli:main

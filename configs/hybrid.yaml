@@ -1,0 +1,41 @@
+# Dense + BM25 with RRF and heuristic reranking. The sensible default.
+# Generated starting point - edit freely.
+
+name: hybrid
+description: Dense + BM25 with RRF and heuristic reranking. The sensible default.
+llm:
+  type: mock
+embedder:
+  type: hash
+  dim: 512
+vectorstore:
+  type: memory
+loader:
+  type: auto
+chunker:
+  type: sentence
+  max_tokens: 350
+  overlap_sentences: 1
+transform:
+  type: identity
+retriever:
+  type: hybrid_rrf
+reranker:
+  type: keyword_overlap
+compressor:
+  type: submodular
+generator:
+  type: stuff
+top_k: 30
+top_n: 8
+context_token_budget: 3000
+namespace: default
+min_score: 0.0
+abstain_when_empty: true
+guardrails: true
+cache: false
+cache_ttl_seconds: 3600
+verify: false
+verify_threshold: 0.8
+system_prompt: null
+metadata: {}

@@ -1,0 +1,70 @@
+Metadata-Version: 2.4
+Name: nexus-rag
+Version: 1.0.0
+Summary: Nexus AI — agentic RAG engine and a plug-and-play RAG lab for data scientists.
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi<1.0,>=0.115
+Requires-Dist: pydantic>=2.7
+Requires-Dist: pydantic-settings>=2.3
+Requires-Dist: PyYAML>=6.0
+Provides-Extra: notebook
+Requires-Dist: pandas>=2.2; extra == "notebook"
+Requires-Dist: jupyter>=1.0; extra == "notebook"
+Provides-Extra: local
+Requires-Dist: sentence-transformers>=3.0; extra == "local"
+Requires-Dist: torch>=2.2; extra == "local"
+Provides-Extra: openai
+Requires-Dist: openai>=1.40; extra == "openai"
+Provides-Extra: azure
+Requires-Dist: openai>=1.40; extra == "azure"
+Requires-Dist: azure-identity>=1.17; extra == "azure"
+Provides-Extra: anthropic
+Requires-Dist: anthropic>=0.40; extra == "anthropic"
+Provides-Extra: cohere
+Requires-Dist: cohere>=5.0; extra == "cohere"
+Provides-Extra: stores
+Requires-Dist: qdrant-client>=1.12; extra == "stores"
+Requires-Dist: chromadb>=0.5; extra == "stores"
+Requires-Dist: faiss-cpu>=1.8; extra == "stores"
+Requires-Dist: asyncpg>=0.29; extra == "stores"
+Provides-Extra: loaders
+Requires-Dist: pypdf>=4.2; extra == "loaders"
+Requires-Dist: python-docx>=1.1; extra == "loaders"
+Requires-Dist: beautifulsoup4>=4.12; extra == "loaders"
+Requires-Dist: python-pptx>=1.0; extra == "loaders"
+Requires-Dist: openpyxl>=3.1; extra == "loaders"
+Provides-Extra: tokenizers
+Requires-Dist: tiktoken>=0.7; extra == "tokenizers"
+Provides-Extra: all
+Requires-Dist: pandas>=2.2; extra == "all"
+Requires-Dist: sentence-transformers>=3.0; extra == "all"
+Requires-Dist: openai>=1.40; extra == "all"
+Requires-Dist: azure-identity>=1.17; extra == "all"
+Requires-Dist: qdrant-client>=1.12; extra == "all"
+Requires-Dist: chromadb>=0.5; extra == "all"
+Requires-Dist: asyncpg>=0.29; extra == "all"
+Requires-Dist: pypdf>=4.2; extra == "all"
+Requires-Dist: python-docx>=1.1; extra == "all"
+Requires-Dist: beautifulsoup4>=4.12; extra == "all"
+Requires-Dist: python-pptx>=1.0; extra == "all"
+Requires-Dist: openpyxl>=3.1; extra == "all"
+Requires-Dist: tiktoken>=0.7; extra == "all"
+
+# nexus-rag (backend)
+
+The FastAPI + LangGraph engine and the plug-and-play RAG lab.
+
+- `app/` — the production engine (chat, routing, agents, ingestion, observability)
+- `app/rag/` — the RAG lab: swappable components, evaluation, sweeps, CLI
+- `tests/` — `python -m pytest`
+
+Install the toolkit and its `nexus-rag` command:
+
+```bash
+pip install -e .            # core only; every backend is optional
+pip install -e ".[all]"     # every provider, store and loader
+nexus-rag components
+```
+
+See the repository README for the full guide.

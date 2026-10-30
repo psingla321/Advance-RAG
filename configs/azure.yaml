@@ -1,0 +1,44 @@
+# Matches the production Nexus engine: Azure OpenAI + Qdrant.
+# Generated starting point - edit freely.
+
+name: azure
+description: 'Matches the production Nexus engine: Azure OpenAI + Qdrant.'
+llm:
+  type: azure_openai
+embedder:
+  type: cached
+  backend: redis
+  inner:
+    type: azure_openai
+    dim: 1024
+vectorstore:
+  type: qdrant
+  url: ${QDRANT_URL:-http://localhost:6333}
+loader:
+  type: auto
+chunker:
+  type: sentence
+  max_tokens: 350
+transform:
+  type: rewrite
+retriever:
+  type: hybrid_rrf
+reranker:
+  type: keyword_overlap
+compressor:
+  type: submodular
+generator:
+  type: self_rag
+top_k: 30
+top_n: 8
+context_token_budget: 3000
+namespace: default
+min_score: 0.0
+abstain_when_empty: true
+guardrails: true
+cache: false
+cache_ttl_seconds: 3600
+verify: true
+verify_threshold: 0.8
+system_prompt: null
+metadata: {}

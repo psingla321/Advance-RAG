@@ -1,0 +1,41 @@
+# Minimises token spend: small chunks, tight budget, extractive compression.
+# Generated starting point - edit freely.
+
+name: cheap
+description: 'Minimises token spend: small chunks, tight budget, extractive compression.'
+llm:
+  type: mock
+embedder:
+  type: hash
+  dim: 512
+vectorstore:
+  type: memory
+loader:
+  type: auto
+chunker:
+  type: sentence
+  max_tokens: 200
+transform:
+  type: identity
+retriever:
+  type: hybrid_rrf
+reranker:
+  type: keyword_overlap
+compressor:
+  type: sentence_filter
+generator:
+  type: stuff
+  max_tokens: 400
+top_k: 20
+top_n: 4
+context_token_budget: 1200
+namespace: default
+min_score: 0.0
+abstain_when_empty: true
+guardrails: true
+cache: true
+cache_ttl_seconds: 3600
+verify: false
+verify_threshold: 0.8
+system_prompt: null
+metadata: {}

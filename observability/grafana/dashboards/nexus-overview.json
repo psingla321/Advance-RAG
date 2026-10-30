@@ -1,0 +1,91 @@
+{
+  "uid": "nexus-overview",
+  "title": "Nexus AI - Engine Overview",
+  "tags": ["nexus"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {
+      "type": "stat", "title": "Requests / min", "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(rate(nexus_chat_requests_total[5m])) * 60"}]
+    },
+    {
+      "type": "stat", "title": "P95 latency (s)", "gridPos": {"x": 4, "y": 0, "w": 4, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(nexus_chat_latency_seconds_bucket[5m])) by (le))"}]
+    },
+    {
+      "type": "stat", "title": "Cache hit ratio", "gridPos": {"x": 8, "y": 0, "w": 4, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "percentunit"}},
+      "targets": [{"expr": "sum(rate(nexus_cache_lookups_total{result=~\"L.*\"}[5m])) / clamp_min(sum(rate(nexus_cache_lookups_total[5m])), 1e-9)"}]
+    },
+    {
+      "type": "stat", "title": "In-flight requests", "gridPos": {"x": 12, "y": 0, "w": 4, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(nexus_inflight_requests)"}]
+    },
+    {
+      "type": "stat", "title": "Ingestion queue depth", "gridPos": {"x": 16, "y": 0, "w": 4, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "max(nexus_ingestion_queue_depth)"}]
+    },
+    {
+      "type": "stat", "title": "Avg groundedness", "gridPos": {"x": 20, "y": 0, "w": 4, "h": 4},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "percentunit"}},
+      "targets": [{"expr": "sum(rate(nexus_groundedness_score_sum[15m])) / clamp_min(sum(rate(nexus_groundedness_score_count[15m])), 1e-9)"}]
+    },
+    {
+      "type": "timeseries", "title": "Requests by mode", "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(rate(nexus_chat_requests_total[1m])) by (mode)", "legendFormat": "{{mode}}"}]
+    },
+    {
+      "type": "timeseries", "title": "Requests by outcome", "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(rate(nexus_chat_requests_total[1m])) by (outcome)", "legendFormat": "{{outcome}}"}]
+    },
+    {
+      "type": "timeseries", "title": "Latency percentiles (s)", "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum(rate(nexus_chat_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, sum(rate(nexus_chat_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p95"},
+        {"expr": "histogram_quantile(0.99, sum(rate(nexus_chat_latency_seconds_bucket[5m])) by (le))", "legendFormat": "p99"}
+      ]
+    },
+    {
+      "type": "timeseries", "title": "P95 latency by engine node (s)", "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(nexus_node_latency_seconds_bucket[5m])) by (le, node))", "legendFormat": "{{node}}"}]
+    },
+    {
+      "type": "timeseries", "title": "LLM tokens / s", "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(rate(nexus_llm_tokens_total[1m])) by (kind, model)", "legendFormat": "{{model}} {{kind}}"}]
+    },
+    {
+      "type": "timeseries", "title": "Cache lookups by result", "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(rate(nexus_cache_lookups_total[1m])) by (result)", "legendFormat": "{{result}}"}]
+    },
+    {
+      "type": "timeseries", "title": "Ingestion jobs / min", "gridPos": {"x": 0, "y": 28, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(rate(nexus_ingestion_jobs_total[5m])) by (status) * 60", "legendFormat": "{{status}}"}]
+    },
+    {
+      "type": "timeseries", "title": "Protection: rate limited, load shed, feedback", "gridPos": {"x": 12, "y": 28, "w": 12, "h": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum(rate(nexus_rate_limited_total[5m]))", "legendFormat": "rate limited"},
+        {"expr": "sum(rate(nexus_load_shed_total[5m]))", "legendFormat": "load shed"},
+        {"expr": "sum(rate(nexus_feedback_total[5m])) by (rating)", "legendFormat": "feedback {{rating}}"}
+      ]
+    }
+  ]
+}

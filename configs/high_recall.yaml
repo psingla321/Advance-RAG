@@ -1,0 +1,48 @@
+# Optimised for not missing anything: wide fetch, query expansion, graph hops.
+# Generated starting point - edit freely.
+
+name: high_recall
+description: 'Optimised for not missing anything: wide fetch, query expansion, graph
+  hops.'
+llm:
+  type: mock
+embedder:
+  type: hash
+  dim: 512
+vectorstore:
+  type: memory
+loader:
+  type: auto
+chunker:
+  type: sentence
+  max_tokens: 300
+transform:
+  type: chain
+  steps:
+  - type: multi_query
+    n: 4
+  - type: hyde
+retriever:
+  type: graph
+  inner:
+    type: ensemble
+  hops: 1
+reranker:
+  type: cross_encoder
+compressor:
+  type: submodular
+generator:
+  type: stuff
+top_k: 60
+top_n: 12
+context_token_budget: 5000
+namespace: default
+min_score: 0.0
+abstain_when_empty: true
+guardrails: true
+cache: false
+cache_ttl_seconds: 3600
+verify: false
+verify_threshold: 0.8
+system_prompt: null
+metadata: {}
