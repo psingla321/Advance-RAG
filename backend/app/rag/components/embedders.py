@@ -233,7 +233,7 @@ class CachedEmbedderWrapper(Embedder):
     """
 
     def __init__(
-        self, inner: dict[str, Any] | str, backend: str = "file", path: str = ".nexus_cache/emb",
+        self, inner: dict[str, Any] | str, backend: str = "file", path: str = ".advance_rag_cache/emb",
         redis_url: str = "redis://localhost:6379/0", ttl_seconds: int = 30 * 86400,
     ) -> None:
         from pathlib import Path

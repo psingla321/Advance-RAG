@@ -12,26 +12,26 @@ from prometheus_client import Counter, Gauge, Histogram
 from app.config import Settings
 
 request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
-tracer = trace.get_tracer("nexus")
+tracer = trace.get_tracer("advance_rag")
 
 _LATENCY_BUCKETS = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30)
 
 # Tenant is intentionally not a label (unbounded cardinality); per-tenant analytics live in InsightsStore.
-CHAT_REQUESTS = Counter("nexus_chat_requests_total", "Chat requests by outcome", ["mode", "route", "outcome"])
-CHAT_LATENCY = Histogram("nexus_chat_latency_seconds", "End-to-end chat latency", ["mode"], buckets=_LATENCY_BUCKETS)
-NODE_LATENCY = Histogram("nexus_node_latency_seconds", "Latency per engine node", ["node"], buckets=_LATENCY_BUCKETS)
-CACHE_LOOKUPS = Counter("nexus_cache_lookups_total", "Answer cache lookups", ["result"])
-GROUNDEDNESS = Histogram("nexus_groundedness_score", "Verifier groundedness", buckets=(0.2, 0.4, 0.6, 0.8, 0.9, 1.0))
-TRUST = Histogram("nexus_trust_score", "Answer trust score", buckets=(0.2, 0.4, 0.6, 0.75, 0.9, 1.0))
-LLM_CALLS = Counter("nexus_llm_calls_total", "LLM/embedding calls", ["operation", "model"])
-LLM_TOKENS = Counter("nexus_llm_tokens_total", "LLM tokens", ["kind", "model"])
-INFLIGHT = Gauge("nexus_inflight_requests", "Chat requests currently in flight")
-RATE_LIMITED = Counter("nexus_rate_limited_total", "Requests rejected by rate limiting")
-SHED = Counter("nexus_load_shed_total", "Requests rejected due to overload")
-INGEST_JOBS = Counter("nexus_ingestion_jobs_total", "Ingestion jobs by status", ["status"])
-INGEST_LATENCY = Histogram("nexus_ingestion_seconds", "Ingestion duration per document", buckets=(0.1, 0.5, 1, 2, 5, 10, 30, 60, 120))
-QUEUE_DEPTH = Gauge("nexus_ingestion_queue_depth", "Ingestion jobs waiting or in progress")
-FEEDBACK = Counter("nexus_feedback_total", "User feedback", ["rating"])
+CHAT_REQUESTS = Counter("advance_rag_chat_requests_total", "Chat requests by outcome", ["mode", "route", "outcome"])
+CHAT_LATENCY = Histogram("advance_rag_chat_latency_seconds", "End-to-end chat latency", ["mode"], buckets=_LATENCY_BUCKETS)
+NODE_LATENCY = Histogram("advance_rag_node_latency_seconds", "Latency per engine node", ["node"], buckets=_LATENCY_BUCKETS)
+CACHE_LOOKUPS = Counter("advance_rag_cache_lookups_total", "Answer cache lookups", ["result"])
+GROUNDEDNESS = Histogram("advance_rag_groundedness_score", "Verifier groundedness", buckets=(0.2, 0.4, 0.6, 0.8, 0.9, 1.0))
+TRUST = Histogram("advance_rag_trust_score", "Answer trust score", buckets=(0.2, 0.4, 0.6, 0.75, 0.9, 1.0))
+LLM_CALLS = Counter("advance_rag_llm_calls_total", "LLM/embedding calls", ["operation", "model"])
+LLM_TOKENS = Counter("advance_rag_llm_tokens_total", "LLM tokens", ["kind", "model"])
+INFLIGHT = Gauge("advance_rag_inflight_requests", "Chat requests currently in flight")
+RATE_LIMITED = Counter("advance_rag_rate_limited_total", "Requests rejected by rate limiting")
+SHED = Counter("advance_rag_load_shed_total", "Requests rejected due to overload")
+INGEST_JOBS = Counter("advance_rag_ingestion_jobs_total", "Ingestion jobs by status", ["status"])
+INGEST_LATENCY = Histogram("advance_rag_ingestion_seconds", "Ingestion duration per document", buckets=(0.1, 0.5, 1, 2, 5, 10, 30, 60, 120))
+QUEUE_DEPTH = Gauge("advance_rag_ingestion_queue_depth", "Ingestion jobs waiting or in progress")
+FEEDBACK = Counter("advance_rag_feedback_total", "User feedback", ["rating"])
 
 
 class JsonFormatter(logging.Formatter):

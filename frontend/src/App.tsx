@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getHealth, sendFeedback, streamChat } from './api'
+import { uuid } from './platform'
 import type { ChatMessage, Conversation, FinalPayload, Identity, Routing, TraceEntry, View } from './types'
 import { ChatView } from './views/ChatView'
 import { InsightsView } from './views/InsightsView'
+import { CatalogueView } from './views/CatalogueView'
 import { LabView } from './views/LabView'
 import { KnowledgeView } from './views/KnowledgeView'
 
-const STORAGE = { identity: 'nexus.identity', conversations: 'nexus.conversations', theme: 'nexus.theme' }
+const STORAGE = { identity: 'advance_rag.identity', conversations: 'advance_rag.conversations', theme: 'advance_rag.theme' }
 const MAX_CONVERSATIONS = 30
 const MAX_MESSAGES = 60
 
@@ -19,7 +21,7 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
-const newId = () => crypto.randomUUID()
+const newId = () => uuid()
 const emptyConversation = (): Conversation => ({ id: newId(), serverId: null, title: 'New chat', updatedAt: Date.now(), messages: [] })
 
 export default function App() {
@@ -168,6 +170,7 @@ export default function App() {
     { id: 'knowledge', icon: '📚', label: 'Knowledge' },
     { id: 'insights', icon: '📈', label: 'Insights' },
     { id: 'lab', icon: '🧪', label: 'RAG Lab' },
+    { id: 'catalogue', icon: '🧩', label: 'Catalogue' },
   ]
 
   return (
@@ -176,7 +179,7 @@ export default function App() {
         <div className="brand">
           <div className="logo">N</div>
           <div>
-            <div className="brand-name">Nexus AI</div>
+            <div className="brand-name">AdvanceRAG</div>
             <div className="brand-sub">Agentic enterprise engine</div>
           </div>
         </div>
@@ -258,6 +261,7 @@ export default function App() {
       {view === 'insights' && <InsightsView identity={identity} />}
       {view === 'knowledge' && <KnowledgeView identity={identity} />}
       {view === 'lab' && <LabView />}
+      {view === 'catalogue' && <CatalogueView />}
     </div>
   )
 }

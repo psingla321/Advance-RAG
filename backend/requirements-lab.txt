@@ -2,7 +2,7 @@
 #
 # The toolkit itself needs nothing beyond requirements.txt: the "offline" preset
 # runs on the standard library. Install only the lines you actually want —
-# every backend is imported lazily, and `nexus-rag components -v` shows which
+# every backend is imported lazily, and `advance-rag components -v` shows which
 # package each one needs.
 
 -r requirements.txt

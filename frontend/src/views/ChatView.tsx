@@ -45,7 +45,7 @@ export function ChatView({ messages, busy, input, onInput, onSend, onStop, onFee
             <div className="hero-logo">N</div>
             <h1>How can I help today?</h1>
             <p>
-              Nexus routes every question to the best path — documents, SQL analytics, tools, the LLM, or a human —
+              AdvanceRAG routes every question to the best path — documents, SQL analytics, tools, the LLM, or a human —
               verifies the answer, and shows you exactly how it got there.
             </p>
             <div className="suggestions">

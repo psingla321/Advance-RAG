@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nexus-rag"
+name = "advance-rag"
 version = "1.0.0"
-description = "Nexus AI — agentic RAG engine and a plug-and-play RAG lab for data scientists."
+description = "AdvanceRAG — agentic RAG engine and a plug-and-play RAG lab for data scientists."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -35,7 +35,7 @@ all = [
 ]
 
 [project.scripts]
-nexus-rag = "app.rag.cli:main"
+advance-rag = "app.rag.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["app*"]

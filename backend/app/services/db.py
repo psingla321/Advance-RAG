@@ -51,12 +51,12 @@ CREATE TABLE IF NOT EXISTS sales (
 
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'nexus_reader') THEN
-        CREATE ROLE nexus_reader NOLOGIN;
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'advance_rag_reader') THEN
+        CREATE ROLE advance_rag_reader NOLOGIN;
     END IF;
 END
 $$;
-GRANT SELECT ON sales TO nexus_reader;
+GRANT SELECT ON sales TO advance_rag_reader;
 ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sales FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS tenant_isolation ON sales;
@@ -214,7 +214,7 @@ class Database:
         async with self.pool.acquire() as conn:
             async with conn.transaction(readonly=True):
                 # Least-privilege role + RLS tenant scoping + timeout, all transaction-local.
-                await conn.execute("SET LOCAL ROLE nexus_reader")
+                await conn.execute("SET LOCAL ROLE advance_rag_reader")
                 await conn.execute(f"SET LOCAL statement_timeout = {int(timeout_ms)}")
                 await conn.execute("SELECT set_config('app.tenant_id', $1, true)", tenant)
                 statement = await conn.prepare(sql)

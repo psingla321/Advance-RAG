@@ -1,4 +1,4 @@
-name: nexus
+name: advance_rag
 
 services:
   redis:
@@ -19,13 +19,13 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: nexus
+      POSTGRES_USER: advance_rag
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: nexus
+      POSTGRES_DB: advance_rag
     ports: ["5432:5432"]
     volumes: [postgres-data:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nexus -d nexus"]
+      test: ["CMD-SHELL", "pg_isready -U advance_rag -d advance_rag"]
       interval: 5s
       retries: 10
 
@@ -35,7 +35,7 @@ services:
       - path: .env
         required: false
     environment: &backend-env
-      POSTGRES_DSN: postgresql://nexus:${POSTGRES_PASSWORD}@postgres:5432/nexus
+      POSTGRES_DSN: postgresql://advance_rag:${POSTGRES_PASSWORD}@postgres:5432/advance_rag
       REDIS_URL: redis://redis:6379/0
       QDRANT_URL: http://qdrant:6333
       RUN_EMBEDDED_WORKER: "false"

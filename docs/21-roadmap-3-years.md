@@ -2,7 +2,7 @@
 
 ```mermaid
 gantt
-    title Nexus AI Platform Roadmap
+    title AdvanceRAG Platform Roadmap
     dateFormat YYYY-MM
     axisFormat %Y-%m
     section Year 1 - Foundation

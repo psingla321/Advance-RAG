@@ -13,8 +13,26 @@ from typing import Any
 
 from app.rag.base import LLM, QueryTransform
 from app.rag.registry import build, register
+from app.textutil import keyword_terms
 
 log = logging.getLogger(__name__)
+
+_CONJUNCTION = re.compile(r"\s*(?:\?|;|,?\s+\band also\b|,?\s+\band\b(?=\s+(?:how|what|when|where|which|who|why|is|are|does|do|can)\b))\s*", re.I)
+_PRONOUN = re.compile(r"\b(it|its|they|them|that|this|those|these|there|he|she)\b|^\s*(?:and|what about|how about)\b", re.I)
+
+
+def _offline(llm: LLM | None) -> bool:
+    """True when no real model is available, so transforms use deterministic heuristics.
+
+    The mock LLM answers extractively from a context block; fed a transform prompt it
+    would echo the prompt back and pollute the search. The heuristics below show what
+    each technique does without a model; with a real LLM they are never used.
+    """
+    return llm is None or getattr(llm, "is_mock", False)
+
+
+def _keywords(query: str) -> str:
+    return " ".join(keyword_terms(query, limit=12))
 
 
 def _parse_lines(text: str, limit: int) -> list[str]:
@@ -60,14 +78,17 @@ class MultiQueryTransform(QueryTransform):
         self._include_original = include_original
 
     async def transform(self, query: str, context: dict[str, Any] | None = None) -> list[str]:
-        if self._llm is None:
-            return [query]
-        try:
-            raw = await self._llm.ask(self.PROMPT.format(n=self._n, query=query), json_mode=True, max_tokens=300)
-        except Exception as exc:
-            log.warning("multi_query transform failed: %s", exc)
-            return [query]
-        variants = _parse_lines(raw, self._n)
+        if _offline(self._llm):
+            # Offline: a keyword-only form and a declarative form approximate paraphrases.
+            keywords = _keywords(query)
+            variants = [keywords, f"policy on {keywords}"] if keywords else []
+        else:
+            try:
+                raw = await self._llm.ask(self.PROMPT.format(n=self._n, query=query), json_mode=True, max_tokens=300)
+            except Exception as exc:
+                log.warning("multi_query transform failed: %s", exc)
+                return [query]
+            variants = variants[: self._n]
         return ([query] if self._include_original else []) + [v for v in variants if v.lower() != query.lower()]
 
 
@@ -91,9 +112,13 @@ class HyDETransform(QueryTransform):
         self._n = n
 
     async def transform(self, query: str, context: dict[str, Any] | None = None) -> list[str]:
-        if self._llm is None:
-            return [query]
         variants: list[str] = [query] if self._include_original else []
+        if _offline(self._llm):
+            # Offline: a templated "answer-shaped" passage built from the question's keywords.
+            keywords = _keywords(query)
+            if keywords:
+                variants.append(f"According to company policy, the {keywords} is defined as follows.")
+            return variants or [query]
         for _ in range(self._n):
             try:
                 passage = await self._llm.ask(self.PROMPT.format(query=query), temperature=0.7, max_tokens=250)
@@ -122,8 +147,10 @@ class StepBackTransform(QueryTransform):
         self._llm = llm
 
     async def transform(self, query: str, context: dict[str, Any] | None = None) -> list[str]:
-        if self._llm is None:
-            return [query]
+        if _offline(self._llm):
+            # Offline: drop numbers and keep the leading topic words — the broader question.
+            topic = " ".join(t for t in keyword_terms(query, limit=4) if not t.isdigit())
+            return [query, f"What are the general rules for {topic}?"] if topic else [query]
         try:
             broader = (await self._llm.ask(self.PROMPT.format(query=query), max_tokens=100)).strip()
         except Exception as exc:
@@ -152,8 +179,11 @@ class DecomposeTransform(QueryTransform):
         self._include_original = include_original
 
     async def transform(self, query: str, context: dict[str, Any] | None = None) -> list[str]:
-        if self._llm is None:
-            return [query]
+        if _offline(self._llm):
+            # Offline: split on question marks, semicolons and "and <question word>".
+            parts = [p.strip(" ,") for p in _CONJUNCTION.split(query) if p and len(p.strip(" ,")) > 3]
+            subs = [p if p.endswith("?") else f"{p}?" for p in parts] if len(parts) > 1 else []
+            return ([query] if self._include_original or not subs else []) + subs[: self._n]
         try:
             raw = await self._llm.ask(self.PROMPT.format(n=self._n, query=query), json_mode=True, max_tokens=300)
         except Exception as exc:
@@ -182,8 +212,15 @@ class RewriteTransform(QueryTransform):
 
     async def transform(self, query: str, context: dict[str, Any] | None = None) -> list[str]:
         history = (context or {}).get("history") or []
-        if self._llm is None or not history:
+        if not history:
             return [query]
+        if _offline(self._llm):
+            # Offline: a follow-up with a pronoun or "what about" borrows the last user turn's topic.
+            if not _PRONOUN.search(query):
+                return [query]
+            last = next((m.get("content", "") for m in reversed(history) if m.get("role", "user") == "user"), "")
+            topic = _keywords(last)
+            return [f"{query} ({topic})" if topic else query]
         rendered = "\n".join(f"{m.get('role', 'user')}: {m.get('content', '')}" for m in history[-self._max_turns :])
         try:
             standalone = (await self._llm.ask(self.PROMPT.format(history=rendered, query=query), max_tokens=120)).strip()

@@ -197,7 +197,7 @@ PRESETS: dict[str, dict[str, Any]] = {
         "description": "Fully local and private: Ollama + sentence-transformers, no data leaves the machine.",
         "llm": {"type": "ollama", "model": "llama3.1"},
         "embedder": {"type": "cached", "inner": {"type": "sentence_transformers", "model": "BAAI/bge-small-en-v1.5"}},
-        "vectorstore": {"type": "memory", "persist_path": ".nexus_cache/store.json"},
+        "vectorstore": {"type": "memory", "persist_path": ".advance_rag_cache/store.json"},
         "chunker": {"type": "semantic"},
         "retriever": {"type": "hybrid_rrf"},
         "reranker": {"type": "cross_encoder"},
@@ -205,7 +205,7 @@ PRESETS: dict[str, dict[str, Any]] = {
     },
     "azure": {
         "name": "azure",
-        "description": "Matches the production Nexus engine: Azure OpenAI + Qdrant.",
+        "description": "Matches the production AdvanceRAG engine: Azure OpenAI + Qdrant.",
         "llm": {"type": "azure_openai"},
         "embedder": {"type": "cached", "backend": "redis",
                      "inner": {"type": "azure_openai", "dim": 1024}},

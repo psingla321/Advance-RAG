@@ -2,7 +2,7 @@
 
 ## 1. Retrieval Methods Compared
 
-| Method | How it works | Strengths | Weaknesses | Latency @ scale | Use in Nexus |
+| Method | How it works | Strengths | Weaknesses | Latency @ scale | Use in AdvanceRAG |
 |---|---|---|---|---|---|
 | **BM25** (lexical) | Term frequency / inverse doc frequency on inverted index | Exact terms, IDs, codes, names, acronyms; explainable; cheap | No synonyms/paraphrase; language-specific analyzers needed | 10–50 ms | Always on as part of hybrid |
 | **Dense retrieval** | ANN (HNSW) over embeddings | Semantic similarity, paraphrase, cross-lingual | Misses rare exact tokens; embedding cost; opaque | 20–80 ms | Always on as part of hybrid |

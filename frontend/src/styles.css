@@ -64,8 +64,10 @@ button.icon { background: none; border: 1px solid transparent; padding: 4px 7px;
 button.icon:hover:not(:disabled) { background: var(--surface-3); border-color: var(--border); }
 button.icon.selected { background: var(--surface-3); }
 button.icon.small { font-size: 11px; padding: 2px 5px; }
-input { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; outline: none; }
-input:focus { border-color: var(--accent); }
+input, select, textarea { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+select { cursor: pointer; max-width: 100%; }
+textarea { resize: vertical; line-height: 1.5; }
 
 .layout { display: grid; grid-template-columns: 280px 1fr; height: 100vh; }
 
@@ -236,9 +238,97 @@ tbody tr:hover { background: var(--surface-2); }
 .queue { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .queue li { display: flex; gap: 10px; align-items: center; font-size: 12.5px; }
 
+/* ------------------------------------------------------------------ RAG Lab */
+.card.wide { grid-column: 1 / -1; }
+
+/* The pipeline as a numbered flow: each stage is a block, never inline text. */
+.lab-stages { display: flex; flex-direction: column; gap: 8px; }
+.lab-stage {
+  display: grid; grid-template-columns: 26px 1fr; gap: 4px 10px; align-items: center;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px;
+  position: relative;
+}
+.lab-stage + .lab-stage::before {
+  content: '↓'; position: absolute; top: -13px; left: 22px;
+  color: var(--muted); font-size: 11px; line-height: 1;
+}
+.lab-stage-num {
+  grid-row: span 2; width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--surface-3); color: var(--accent); font-size: 11px; font-weight: 700;
+}
+.lab-stage-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lab-stage-label { font-weight: 600; font-size: 13px; min-width: 112px; }
+.lab-stage-top select { flex: 1; min-width: 150px; }
+.lab-stage-hint { grid-column: 2; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.lab-stage .badge { align-self: start; }
+
+.lab-knobs { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.lab-knobs label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.lab-knobs input { width: 96px; }
+
+.lab-text { width: 100%; min-height: 128px; font-size: 12.5px; font-family: Consolas, 'Cascadia Code', monospace; }
+.lab-field { display: flex; flex-direction: column; gap: 6px; }
+
+.lab-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.lab-question { flex: 1; min-width: 260px; }
+
+.lab-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.lab-tab { background: none; border: 1px solid transparent; border-bottom: none; border-radius: 10px 10px 0 0; padding: 7px 13px; color: var(--muted); margin-bottom: -1px; }
+.lab-tab.active { background: var(--surface-2); border-color: var(--border); color: var(--text); font-weight: 600; }
+.lab-result { display: flex; flex-direction: column; gap: 10px; }
+.lab-answer { margin: 0; line-height: 1.65; background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 11px 14px; white-space: pre-wrap; }
+.lab-citations { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; }
+.lab-citations li { background: var(--surface-2); border-radius: 8px; padding: 6px 10px; }
+.lab-snippet { max-width: 420px; font-size: 12px; line-height: 1.45; }
+.lab-score { display: flex; align-items: center; gap: 8px; }
+.lab-score .bar-track { flex: 1; min-width: 80px; }
+.lab-best { background: rgba(34, 197, 94, 0.08); }
+.lab-best td { font-weight: 600; }
+
+.lab-axes { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.lab-axis { display: flex; gap: 6px; align-items: center; }
+.lab-axis input:first-child { width: 190px; }
+.lab-axis input:nth-child(2) { flex: 1; }
+
+/* Stage-by-stage funnel: how many candidates survive each step. */
+.lab-funnel { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.lab-funnel-step { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 11px 13px; }
+.lab-funnel-step h4 { margin: 0 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.lab-funnel-count { font-size: 22px; font-weight: 700; }
+.lab-funnel-count span { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 5px; }
+.lab-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.lab-chips code { font-size: 10.5px; }
+
+.lab-note { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.lab-explain-box { background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 10px 13px; font-size: 12.5px; line-height: 1.55; }
+.lab-explain-box b { color: var(--text); }
+
+/* Chunk playground: each chunk as a visible block with its token count. */
+.lab-chunk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.lab-chunk-col { min-width: 0; }
+.lab-chunk-list { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
+.lab-chunk { background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 7px 10px; font-size: 12px; line-height: 1.45; }
+.lab-chunk-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 10.5px; margin-bottom: 3px; }
+
+.lab-variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+
+/* Catalogue: every component, grouped by pipeline stage. */
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px; }
+.cat-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; cursor: pointer; transition: border-color 0.15s; }
+.cat-item:hover { border-color: var(--accent); }
+.cat-item.open { border-color: var(--accent); background: var(--surface-3); }
+.cat-item-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 5px; }
+.cat-item-head code { font-weight: 700; background: none; padding: 0; font-size: 13px; }
+.cat-summary { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.cat-params { margin-top: 9px; padding-top: 8px; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 4px; }
+.cat-param { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 11.5px; }
+.cat-param code { font-size: 11px; }
+
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; }
   .sidebar { display: none; }
   .wf-row { grid-template-columns: 100px 1fr 60px; }
   .wf-detail { padding-left: 0; }
+  .lab-stage-label { min-width: 0; }
+  .lab-snippet { max-width: 200px; }
 }

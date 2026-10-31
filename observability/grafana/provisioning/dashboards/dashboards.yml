@@ -1,7 +1,7 @@
 apiVersion: 1
 providers:
-  - name: nexus
-    folder: Nexus
+  - name: advance_rag
+    folder: AdvanceRAG
     type: file
     options:
       path: /var/lib/grafana/dashboards

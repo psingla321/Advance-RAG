@@ -3,7 +3,7 @@
 Each file is a complete RAG system. Use one directly:
 
 ```bash
-nexus-rag ask "..." --config configs/hybrid.yaml
+advance-rag ask "..." --config configs/hybrid.yaml
 ```
 
 ```python
@@ -21,5 +21,5 @@ Values support `${ENV_VAR}` and `${ENV_VAR:-default}` so these files are safe to
 | `hybrid.yaml` | Production default: dense + BM25, reranked. Start here for real work. |
 | `advanced.yaml` | Recall matters more than latency or cost: query expansion, cross-encoder, self-critique. |
 | `local.yaml` | Data cannot leave the machine: Ollama + sentence-transformers. |
-| `azure.yaml` | You are deploying alongside the Nexus production engine. |
+| `azure.yaml` | You are deploying alongside the AdvanceRAG production engine. |
 | `cheap.yaml` | Token spend is the binding constraint. |

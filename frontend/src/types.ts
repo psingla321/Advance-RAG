@@ -134,7 +134,7 @@ export interface Insights {
   system: { queue_depth: number; inflight: number; max_inflight: number; mock_llm: boolean; embedded_worker: boolean }
 }
 
-export type View = 'chat' | 'insights' | 'knowledge' | 'lab'
+export type View = 'chat' | 'insights' | 'knowledge' | 'lab' | 'catalogue'
 
 // ---------------------------------------------------------------- RAG Lab
 
@@ -191,4 +191,68 @@ export interface LabSweepRun {
 export interface SweepAxis {
   key: string
   values: string
+}
+
+/** A candidate as it stood after one pipeline stage. */
+export interface StageChunk {
+  rank: number
+  id: string
+  doc_id: string
+  filename: string
+  heading: string
+  score: number
+  scores: Record<string, number>
+  tokens: number
+  text: string
+}
+
+/** The pipeline X-ray: what every stage saw, for one question. */
+export interface LabExplain {
+  question: string
+  pipeline: {
+    name: string
+    fingerprint: string
+    components: Record<string, { type: string; kind: string }>
+    knobs: { top_k: number; top_n: number; context_token_budget: number }
+  }
+  blocked: boolean
+  answer: string
+  abstained?: boolean
+  citations: Citation[]
+  groundedness: number | null
+  trace: Record<string, unknown>[]
+  latency_ms: number
+  queries?: string[]
+  budget?: number
+  /** Ranked candidates after retrieve, rerank and compress. Empty when blocked. */
+  stages: Partial<Record<'retrieve' | 'rerank' | 'compress', StageChunk[]>>
+}
+
+export interface LabChunkRun {
+  chunker: string
+  ms?: number
+  error?: string
+  stats?: { count: number; avg_tokens: number; min_tokens: number; max_tokens: number }
+  chunks: {
+    ord: number
+    heading: string
+    text: string
+    tokens: number
+    embed_text: string | null
+    context_text: string | null
+  }[]
+}
+
+export interface LabTransformRun {
+  transform: string
+  queries: string[]
+  ms?: number
+  error?: string
+}
+
+/** One pipeline variant in an A/B comparison. */
+export type LabCompareVariant = Partial<LabExplain> & {
+  label: string
+  overrides: Record<string, unknown>
+  error?: string
 }

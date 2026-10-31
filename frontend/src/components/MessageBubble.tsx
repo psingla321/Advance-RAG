@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ChatMessage } from '../types'
+import { copyText } from '../platform'
 import { RichText } from './RichText'
 import { TraceWaterfall } from './TraceWaterfall'
 
@@ -98,7 +99,8 @@ export function MessageBubble({ message, onFeedback }: Props) {
               className="icon"
               title="Copy answer"
               onClick={() =>
-                navigator.clipboard.writeText(message.content).then(() => {
+                copyText(message.content).then((ok) => {
+                  if (!ok) return
                   setCopied(true)
                   setTimeout(() => setCopied(false), 1200)
                 })

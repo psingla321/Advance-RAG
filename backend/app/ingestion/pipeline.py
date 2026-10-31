@@ -32,11 +32,11 @@ class IngestionPipeline:
     async def ingest(self, doc_id: str, tenant: str, filename: str, data: bytes, acl: list[str]) -> None:
         started = time.perf_counter()
         with tracer.start_as_current_span("ingestion.document") as span:
-            span.set_attribute("nexus.doc_id", doc_id)
-            span.set_attribute("nexus.tenant", tenant)
-            span.set_attribute("nexus.bytes", len(data))
+            span.set_attribute("advance_rag.doc_id", doc_id)
+            span.set_attribute("advance_rag.tenant", tenant)
+            span.set_attribute("advance_rag.bytes", len(data))
             ok = await self._ingest(doc_id, tenant, filename, data, acl)
-            span.set_attribute("nexus.status", "indexed" if ok else "failed")
+            span.set_attribute("advance_rag.status", "indexed" if ok else "failed")
         INGEST_JOBS.labels("indexed" if ok else "failed").inc()
         INGEST_LATENCY.observe(time.perf_counter() - started)
 

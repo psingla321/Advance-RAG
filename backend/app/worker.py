@@ -15,7 +15,7 @@ from app.config import get_settings
 from app.observability import QUEUE_DEPTH, setup_logging, setup_tracing, shutdown_tracing
 from app.services.jobs import GROUP, STREAM
 
-log = logging.getLogger("nexus.worker")
+log = logging.getLogger("advance_rag.worker")
 
 RECLAIM_IDLE_MS = 5 * 60 * 1000
 RECLAIM_EVERY_SECONDS = 30
@@ -89,7 +89,7 @@ class IngestionWorker:
 async def main() -> None:
     settings = get_settings()
     setup_logging(settings)
-    setup_tracing(settings, "nexus-worker")
+    setup_tracing(settings, "advance-rag-worker")
     start_http_server(settings.worker_metrics_port)
     core = await build_core(settings)
     stop = asyncio.Event()

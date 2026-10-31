@@ -10,10 +10,12 @@ visible in ``result.trace`` rather than guessed at.
 from __future__ import annotations
 
 import asyncio
+import copy
 import hashlib
 import logging
 import re
 import time
+from collections import OrderedDict
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
@@ -44,6 +46,20 @@ PII_PATTERNS = {
     "ssn": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
     "credit_card": re.compile(r"\b(?:\d[ -]?){13,16}\b"),
 }
+
+
+# Bound on the in-process answer cache so a long-lived pipeline cannot grow without limit.
+ANSWER_CACHE_SIZE = 512
+
+
+def snapshot(contexts: list[ScoredChunk], text_chars: int = 400) -> list[dict[str, Any]]:
+    """Freeze a ranked list for display. Rerankers mutate scores in place, so copy now."""
+    return [
+        {"rank": n, "id": c.id, "doc_id": c.chunk.doc_id, "filename": c.chunk.filename, "heading": c.chunk.heading,
+         "score": round(c.score, 4), "scores": {k: round(v, 4) for k, v in c.scores.items()},
+         "tokens": estimate_tokens(c.chunk.context_text), "text": c.chunk.context_text[:text_chars]}
+        for n, c in enumerate(contexts, 1)
+    ]
 
 
 class GuardrailViolation(ValueError):
@@ -92,7 +108,7 @@ class RAGPipeline:
         self.reranker: Reranker = build("reranker", config.reranker, llm=self.llm, embedder=self.embedder)
         self.compressor: Compressor = build("compressor", config.compressor, llm=self.llm)
         self.generator: Generator = build("generator", config.generator, llm=self.llm)
-        self._answer_cache: dict[str, tuple[float, RAGResult]] = {}
+        self._answer_cache: OrderedDict[str, tuple[float, RAGResult]] = OrderedDict()
         self._initialized = False
         self.stats: dict[str, Any] = {"queries": 0, "documents": 0, "chunks": 0, "cache_hits": 0}
 
@@ -235,11 +251,13 @@ class RAGPipeline:
     async def retrieve(
         self, query: str, namespace: str | None = None, filters: dict[str, Any] | None = None,
         top_n: int | None = None, history: list[dict[str, str]] | None = None,
+        snapshots: dict[str, list[dict[str, Any]]] | None = None,
     ) -> tuple[list[ScoredChunk], list[str], list[dict[str, Any]]]:
         """Run retrieval only. Returns (contexts, queries searched, trace).
 
         Exposed separately so you can evaluate and tune retrieval without paying
         for generation — which is where most RAG quality problems actually live.
+        Pass ``snapshots={}`` to also capture the ranked list after each stage.
         """
         await self.init()
         namespace = namespace or self.config.namespace
@@ -253,16 +271,22 @@ class RAGPipeline:
         with Timer(trace, "retrieve") as timer:
             candidates = await self.retriever.retrieve(queries, self.config.top_k, namespace, filters)
             timer.set(candidates=len(candidates))
+        if snapshots is not None:
+            snapshots["retrieve"] = snapshot(candidates)
 
         with Timer(trace, "rerank") as timer:
             ranked = await self.reranker.rerank(query, candidates, top_n or self.config.top_n)
             if self.config.min_score:
                 ranked = [r for r in ranked if r.score >= self.config.min_score]
             timer.set(kept=len(ranked), top_score=round(ranked[0].score, 4) if ranked else 0.0)
+        if snapshots is not None:
+            snapshots["rerank"] = snapshot(ranked)
 
         with Timer(trace, "compress") as timer:
             packed = await self.compressor.compress(query, ranked, self.config.context_token_budget)
             timer.set(packed=len(packed), tokens=sum(estimate_tokens(p.chunk.context_text) for p in packed))
+        if snapshots is not None:
+            snapshots["compress"] = snapshot(packed)
 
         return packed, queries, trace
 
@@ -285,8 +309,12 @@ class RAGPipeline:
             cached_at, cached = self._answer_cache[key]
             if time.time() - cached_at < self.config.cache_ttl_seconds:
                 self.stats["cache_hits"] += 1
-                cached.metadata = {**cached.metadata, "cache": "hit"}
-                return cached
+                self._answer_cache.move_to_end(key)
+                # Hand out a copy: callers may mutate results, and the cached one must stay pristine.
+                hit = copy.copy(cached)
+                hit.metadata = {**cached.metadata, "cache": "hit"}
+                return hit
+            del self._answer_cache[key]
 
         contexts, queries, trace = await self.retrieve(question, namespace, filters, top_n, history)
 
@@ -318,6 +346,8 @@ class RAGPipeline:
 
         if self.config.cache:
             self._answer_cache[key] = (time.time(), result)
+            while len(self._answer_cache) > ANSWER_CACHE_SIZE:
+                self._answer_cache.popitem(last=False)
         return result
 
     async def stream(
@@ -355,7 +385,9 @@ class RAGPipeline:
                 buffer.append(token)
                 yield {"type": "token", "text": token}
         except NotImplementedError:
-            result = await self.generator.generate(question, contexts, history=history)
+            result = await self.generator.generate(
+                question, contexts, history=history, system=self.config.system_prompt
+            )
             buffer = [result.answer]
             yield {"type": "token", "text": result.answer}
 
@@ -366,6 +398,49 @@ class RAGPipeline:
             "type": "done",
             "answer": answer,
             "citations": [c.__dict__ for c in build_citations(contexts, answer)],
+            "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+        }
+
+    async def explain(
+        self, question: str, namespace: str | None = None, filters: dict[str, Any] | None = None,
+        history: list[dict[str, str]] | None = None, top_n: int | None = None,
+    ) -> dict[str, Any]:
+        """Run the full loop and return what every stage saw — for teaching and debugging.
+
+        Unlike :meth:`query` this bypasses the answer cache, so the snapshots always
+        reflect a live run: candidates after retrieval, after reranking, and after
+        compression, plus the answer, citations and groundedness.
+        """
+        started = time.perf_counter()
+        namespace = namespace or self.config.namespace
+        report: dict[str, Any] = {"question": question, "pipeline": self.describe(), "blocked": False}
+        try:
+            self._guard(question)
+        except GuardrailViolation as exc:
+            return {**report, "blocked": True, "answer": str(exc), "stages": {}, "trace": []}
+
+        stages: dict[str, list[dict[str, Any]]] = {}
+        contexts, queries, trace = await self.retrieve(question, namespace, filters, top_n, history, snapshots=stages)
+        report.update(queries=queries, stages=stages, budget=self.config.context_token_budget)
+
+        if not contexts:
+            answer = "I could not find anything in the knowledge base that answers this question."
+            return {**report, "answer": answer, "abstained": True, "citations": [], "groundedness": None,
+                    "trace": trace, "latency_ms": round((time.perf_counter() - started) * 1000, 1)}
+
+        with Timer(trace, "generate") as timer:
+            result = await self.generator.generate(question, contexts, history=history, system=self.config.system_prompt)
+            timer.set(answer_chars=len(result.answer), abstained=result.abstained)
+        result.contexts = result.contexts or contexts
+        groundedness = result.groundedness
+        if self.config.verify and groundedness is None and not result.abstained:
+            with Timer(trace, "verify") as timer:
+                groundedness = await self._groundedness(result)
+                timer.set(groundedness=groundedness)
+        return {
+            **report, "answer": result.answer, "abstained": result.abstained,
+            "citations": [c.__dict__ for c in result.citations], "groundedness": groundedness,
+            "trace": trace + result.trace, "usage": result.usage,
             "latency_ms": round((time.perf_counter() - started) * 1000, 1),
         }
 

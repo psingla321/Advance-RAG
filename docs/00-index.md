@@ -1,6 +1,6 @@
 # Enterprise Agentic RAG Platform — Architecture Specification
 
-**Codename:** Nexus AI Platform
+**Codename:** AdvanceRAG Platform
 **Primary cloud:** Microsoft Azure (multi-region, global)
 **Application stack:** Python 3.12, FastAPI, LangGraph, Pydantic, OpenTelemetry
 **Status:** Architecture baseline v1.0 (2026-10)
@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-Nexus is a multi-tenant, agentic AI platform that answers questions and executes tasks over **100M+ enterprise documents**, structured databases, knowledge graphs and external APIs for **10,000+ concurrent users** and **10M+ queries/day**.
+AdvanceRAG is a multi-tenant, agentic AI platform that answers questions and executes tasks over **100M+ enterprise documents**, structured databases, knowledge graphs and external APIs for **10,000+ concurrent users** and **10M+ queries/day**.
 
 Every request flows through a **cache-first, router-driven orchestration layer** that decides — without user intervention — whether to:
 

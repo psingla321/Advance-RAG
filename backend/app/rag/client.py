@@ -42,7 +42,7 @@ def _background_loop() -> asyncio.AbstractEventLoop:
     with _lock:
         if _loop is None or _loop.is_closed():
             _loop = asyncio.new_event_loop()
-            _thread = threading.Thread(target=_loop.run_forever, name="nexus-rag-loop", daemon=True)
+            _thread = threading.Thread(target=_loop.run_forever, name="advance-rag-loop", daemon=True)
             _thread.start()
     return _loop
 

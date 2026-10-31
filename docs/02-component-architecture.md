@@ -64,12 +64,12 @@ flowchart LR
 
 | Library | Purpose |
 |---|---|
-| `nexus-core` | Tenant context, correlation ids, error model, settings |
-| `nexus-telemetry` | OTel setup, GenAI semantic conventions, redaction |
-| `nexus-data` | Data Access SDK (mandatory for all data calls) |
-| `nexus-llm` | Model Gateway client, structured output helpers |
-| `nexus-guard` | Guardrail client, PII utilities |
-| `nexus-agents` | Base agent node, budgets, typed results |
+| `advance-rag-core` | Tenant context, correlation ids, error model, settings |
+| `advance-rag-telemetry` | OTel setup, GenAI semantic conventions, redaction |
+| `advance-rag-data` | Data Access SDK (mandatory for all data calls) |
+| `advance-rag-llm` | Model Gateway client, structured output helpers |
+| `advance-rag-guard` | Guardrail client, PII utilities |
+| `advance-rag-agents` | Base agent node, budgets, typed results |
 
 ## 4. Interfaces
 

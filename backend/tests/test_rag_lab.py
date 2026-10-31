@@ -99,8 +99,8 @@ def test_fingerprint_ignores_cosmetic_fields():
 def test_env_expansion_in_config():
     import os
 
-    os.environ["NEXUS_TEST_URL"] = "http://example:1234"
-    config = RAGConfig.from_dict({"vectorstore": {"type": "memory", "persist_path": "${NEXUS_TEST_URL}"}})
+    os.environ["ADVANCE_RAG_TEST_URL"] = "http://example:1234"
+    config = RAGConfig.from_dict({"vectorstore": {"type": "memory", "persist_path": "${ADVANCE_RAG_TEST_URL}"}})
     assert config.vectorstore["persist_path"] == "http://example:1234"
     config = RAGConfig.from_dict({"vectorstore": {"type": "memory", "persist_path": "${NOT_SET:-fallback}"}})
     assert config.vectorstore["persist_path"] == "fallback"

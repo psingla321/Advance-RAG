@@ -164,7 +164,7 @@ def build(kind: str, spec: str | dict[str, Any] | None, **injected: Any) -> Any:
 
 
 def list_components(kind: str | None = None) -> dict[str, list[dict[str, Any]]]:
-    """Catalogue of everything registered — powers ``nexus components`` and /api/lab/components."""
+    """Catalogue of everything registered — powers ``advance_rag components`` and /api/lab/components."""
     kinds = [kind] if kind else list(KINDS)
     return {
         k: [_META[(k, n)].to_dict() for n in sorted(_REGISTRY[k])]

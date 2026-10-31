@@ -130,8 +130,8 @@ def test_feedback_insights_and_metrics(client: TestClient) -> None:
     assert insights["total"] >= 1 and insights["feedback"]["up"] == 1
     assert insights["system"]["embedded_worker"] is True
     metrics = client.get("/metrics").text
-    for name in ("nexus_chat_requests_total", "nexus_node_latency_seconds_bucket", "nexus_cache_lookups_total",
-                 "nexus_ingestion_jobs_total", "nexus_llm_calls_total"):
+    for name in ("advance_rag_chat_requests_total", "advance_rag_node_latency_seconds_bucket", "advance_rag_cache_lookups_total",
+                 "advance_rag_ingestion_jobs_total", "advance_rag_llm_calls_total"):
         assert name in metrics
 
 

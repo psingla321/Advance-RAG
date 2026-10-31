@@ -1,4 +1,4 @@
-"""Nexus RAG Lab — a plug-and-play toolkit for building and evaluating RAG systems.
+"""AdvanceRAG RAG Lab — a plug-and-play toolkit for building and evaluating RAG systems.
 
 Quick start::
 

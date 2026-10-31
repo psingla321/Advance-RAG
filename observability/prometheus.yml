@@ -4,14 +4,14 @@ global:
 
 scrape_configs:
   # DNS service discovery picks up every replica of the scaled services.
-  - job_name: nexus-api
+  - job_name: advance-rag-api
     metrics_path: /metrics
     dns_sd_configs:
       - names: [backend]
         type: A
         port: 8000
 
-  - job_name: nexus-worker
+  - job_name: advance-rag-worker
     dns_sd_configs:
       - names: [worker]
         type: A

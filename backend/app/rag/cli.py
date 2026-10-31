@@ -1,13 +1,13 @@
-"""``nexus-rag`` — command line interface to the RAG lab.
+"""``advance-rag`` — command line interface to the RAG lab.
 
-    nexus-rag components                      list everything pluggable
-    nexus-rag presets                         list built-in recipes
-    nexus-rag ingest ./docs -c hybrid         build an index
-    nexus-rag ask "what is the limit?"        query it
-    nexus-rag testset -n 50 -o golden.jsonl   synthesise an evaluation set
-    nexus-rag eval golden.jsonl -c hybrid     score a configuration
-    nexus-rag sweep golden.jsonl --grid retriever.type=dense,hybrid_rrf,mmr
-    nexus-rag compare golden.jsonl baseline hybrid advanced
+    advance-rag components                      list everything pluggable
+    advance-rag presets                         list built-in recipes
+    advance-rag ingest ./docs -c hybrid         build an index
+    advance-rag ask "what is the limit?"        query it
+    advance-rag testset -n 50 -o golden.jsonl   synthesise an evaluation set
+    advance-rag eval golden.jsonl -c hybrid     score a configuration
+    advance-rag sweep golden.jsonl --grid retriever.type=dense,hybrid_rrf,mmr
+    advance-rag compare golden.jsonl baseline hybrid advanced
 
 Built on argparse so it needs no extra dependency.
 """
@@ -29,7 +29,7 @@ from app.rag.evaluation.runner import evaluate, evaluate_retrieval
 from app.rag.pipeline import build_pipeline
 from app.rag.registry import list_components
 
-DEFAULT_STORE = ".nexus_cache/index.json"
+DEFAULT_STORE = ".advance_rag_cache/index.json"
 
 
 def _config(args: argparse.Namespace) -> RAGConfig:
@@ -127,7 +127,7 @@ def cmd_ask(args: argparse.Namespace) -> int:
         pipeline = await build_pipeline(_config(args))
         try:
             if await pipeline.count() == 0:
-                print("The index is empty — run `nexus-rag ingest <path>` first.", file=sys.stderr)
+                print("The index is empty — run `advance-rag ingest <path>` first.", file=sys.stderr)
                 return 1
             result = await pipeline.query(args.question)
             if args.json:
@@ -243,7 +243,7 @@ def cmd_config(args: argparse.Namespace) -> int:
 
 # -------------------------------------------------------------------- parser
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="nexus-rag", description="Plug-and-play RAG lab.")
+    parser = argparse.ArgumentParser(prog="advance-rag", description="Plug-and-play RAG lab.")
     parser.add_argument("--version", action="store_true", help="print the version and exit")
     sub = parser.add_subparsers(dest="command")
 

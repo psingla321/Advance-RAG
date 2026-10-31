@@ -4,9 +4,13 @@ import type {
   Identity,
   Insights,
   LabAnswer,
+  LabChunkRun,
+  LabCompareVariant,
+  LabExplain,
   LabPreset,
   LabRetrieval,
   LabSweepRun,
+  LabTransformRun,
 } from './types'
 
 function identityHeaders(identity: Identity): Record<string, string> {
@@ -160,3 +164,34 @@ export const runLabSweep = (
   texts: string[],
 ): Promise<{ runs: LabSweepRun[]; failures: { name: string; error: string }[] }> =>
   postJson('/api/lab/sweep', { base, grid, samples, texts })
+
+/** Full run that also reports the ranked list after every stage. */
+export const explainLab = (sessionId: string, question: string): Promise<LabExplain> =>
+  postJson(`/api/lab/sessions/${sessionId}/explain`, { question })
+
+// -- Stateless playground probes: one technique at a time, no session needed. --
+
+export const playgroundChunk = async (text: string, chunkers: (string | object)[]): Promise<LabChunkRun[]> =>
+  (await postJson<{ chunkers: LabChunkRun[] }>('/api/lab/playground/chunk', { text, chunkers })).chunkers
+
+export const playgroundTransform = async (
+  query: string,
+  transforms: string[],
+  history: { role: string; content: string }[] = [],
+): Promise<{ offline: boolean; transforms: LabTransformRun[] }> =>
+  postJson('/api/lab/playground/transform', { query, transforms, history })
+
+export const playgroundGuard = (
+  text: string,
+): Promise<{ blocked: boolean; injection_patterns: string[]; pii: Record<string, string[]> }> =>
+  postJson('/api/lab/playground/guard', { text })
+
+export const playgroundCompare = async (
+  base: string,
+  texts: string[],
+  question: string,
+  variants: { label: string; overrides: Record<string, unknown> }[],
+): Promise<LabCompareVariant[]> =>
+  (await postJson<{ variants: LabCompareVariant[] }>('/api/lab/playground/compare', {
+    base, texts, question, variants,
+  })).variants

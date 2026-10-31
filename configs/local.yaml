@@ -14,7 +14,7 @@ embedder:
     model: BAAI/bge-small-en-v1.5
 vectorstore:
   type: memory
-  persist_path: .nexus_cache/store.json
+  persist_path: .advance_rag_cache/store.json
 loader:
   type: auto
 chunker:

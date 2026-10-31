@@ -32,7 +32,7 @@ class IdentityReranker(Reranker):
 class KeywordOverlapReranker(Reranker):
     """Blends the retrieval score with query-term coverage. Free and surprisingly effective.
 
-    This mirrors the heuristic the production Nexus retriever uses as its
+    This mirrors the heuristic the production AdvanceRAG retriever uses as its
     evidence gate.
     """
 

@@ -1,4 +1,4 @@
-# Nexus AI — Chatbot + Agentic AI Engine
+# AdvanceRAG — Chatbot + Agentic AI Engine
 
 A runnable implementation of the architecture in [docs/](docs/00-index.md): a React chatbot on top of a FastAPI + LangGraph engine that routes each question to the best path — document RAG, SQL analytics, tools, direct LLM, or a human — and verifies answers before returning them.
 
@@ -25,7 +25,7 @@ flowchart LR
 | Parallel agents | LangGraph fan-out: RAG, SQL, tool and direct-LLM nodes run concurrently and fan in to synthesis |
 | Hybrid retrieval | Dense (Qdrant) + keyword (PostgreSQL full-text) → Reciprocal Rank Fusion → rerank → submodular context packing |
 | Security trimming | Tenant + ACL-group filters on every vector and keyword query; cache keys include an ACL hash |
-| SQL safety | sqlglot AST validation (SELECT-only, table allow-list, function deny-list, LIMIT), read-only transaction, `nexus_reader` role, row-level security by tenant, statement timeout |
+| SQL safety | sqlglot AST validation (SELECT-only, table allow-list, function deny-list, LIMIT), read-only transaction, `advance_rag_reader` role, row-level security by tenant, statement timeout |
 | Tools | Safe AST calculator, timezone-aware clock, support tickets with confirmation for side effects |
 | Caching | L1 exact (Redis) + semantic cache (Qdrant) with entity guard and versioned invalidation; L5 embedding cache |
 | Verification | Claim-level groundedness, surgical repair of unsupported sentences, abstention, numeric check for SQL answers; trust score |
@@ -63,7 +63,7 @@ flowchart LR
 | Traces | OpenTelemetry spans for every request, engine node, LLM call and ingestion job; export via OTLP (Jaeger) and/or Azure Monitor (`APPLICATIONINSIGHTS_CONNECTION_STRING`) |
 | Logs | Structured JSON logs carrying `request_id`, `trace_id`, `span_id` |
 | Correlation | `X-Request-Id` propagated from nginx → API → engine → UI; trace id shown in the chat trace panel |
-| Dashboards | Provisioned Grafana dashboard ([observability/grafana/dashboards](observability/grafana/dashboards/nexus-overview.json)) + in-app Insights view |
+| Dashboards | Provisioned Grafana dashboard ([observability/grafana/dashboards](observability/grafana/dashboards/advance-rag-overview.json)) + in-app Insights view |
 | Quality | Per-tenant insights store: P50/P95/P99, cache hit rate, routes, modes, node timings, escalation/abstention, user feedback |
 
 ## UI
@@ -110,7 +110,7 @@ docker compose --profile app --profile observability up -d --build
 
 | Tool | URL |
 |---|---|
-| Grafana (dashboard "Nexus AI - Engine Overview") | http://localhost:3000 |
+| Grafana (dashboard "AdvanceRAG - Engine Overview") | http://localhost:3000 |
 | Jaeger traces | http://localhost:16686 |
 | Prometheus | http://localhost:9090 |
 

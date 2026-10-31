@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -7,13 +8,13 @@ class Settings(BaseSettings):
     # Root .env first, then a local override when running from backend/.
     model_config = SettingsConfigDict(env_file=("../.env", ".env"), env_file_encoding="utf-8", extra="ignore")
 
-    app_name: str = "Nexus Agentic Engine"
+    app_name: str = "AdvanceRAG Engine"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:8080"]
     log_level: str = "INFO"
 
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
-    postgres_dsn: str = "postgresql://nexus@localhost:5432/nexus"
+    postgres_dsn: str = "postgresql://advance_rag@localhost:5432/advance_rag"
 
     azure_openai_endpoint: str | None = None
     azure_openai_api_key: str | None = None
@@ -35,6 +36,25 @@ class Settings(BaseSettings):
 
     max_upload_mb: int = 20
     seed_sample_docs: bool = True
+
+    # Authentication: "header" trusts X-Tenant-Id/X-User-Id/X-User-Groups (local demo only);
+    # "oidc" validates bearer tokens. Claim defaults match Microsoft Entra ID.
+    auth_mode: Literal["header", "oidc"] = "header"
+    oidc_issuer: str | None = None
+    oidc_audience: str | None = None
+    oidc_jwks_url: str | None = None
+    oidc_algorithms: list[str] = ["RS256"]
+    oidc_tenant_claim: str = "tid"
+    oidc_user_claim: str = "oid"
+    oidc_groups_claim: str = "roles"
+    oidc_default_tenant: str | None = None
+
+    # RAG lab / learning playground
+    lab_enabled: bool = True
+    lab_max_sessions: int = 24
+    lab_max_sessions_per_user: int = 3
+    lab_session_ttl_seconds: int = 3600
+    lab_max_corpus_chars: int = 2_000_000
 
     # Scalability
     db_pool_min: int = 1

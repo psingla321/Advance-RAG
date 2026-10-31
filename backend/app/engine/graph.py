@@ -119,8 +119,8 @@ class Engine:
     def _instrument(name: str, fn):
         async def node(state: EngineState) -> dict[str, Any]:
             with tracer.start_as_current_span(f"engine.{name}") as span:
-                span.set_attribute("nexus.tenant", state.get("tenant_id", ""))
-                span.set_attribute("nexus.request_id", state.get("request_id", ""))
+                span.set_attribute("advance_rag.tenant", state.get("tenant_id", ""))
+                span.set_attribute("advance_rag.request_id", state.get("request_id", ""))
                 started = time.perf_counter()
                 try:
                     return await fn(state)

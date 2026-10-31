@@ -24,7 +24,11 @@ log = logging.getLogger(__name__)
 class TextLoader(Loader):
     """Plain text / source code: one section per file."""
 
-    extensions = (".txt", ".log", ".py", ".sql", ".yaml", ".yml", ".ini", ".rst")
+    extensions = (
+        ".txt", ".log", ".py", ".sql", ".yaml", ".yml", ".ini", ".rst",
+        ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".c", ".h", ".cpp", ".hpp", ".cs",
+        ".rb", ".php", ".sh", ".bash", ".ps1", ".toml", ".cfg", ".tf", ".kt", ".swift", ".scala",
+    )
 
     def load(self, filename: str, data: bytes) -> list[Section]:
         return [Section(PurePath(filename).stem, data.decode("utf-8", errors="replace"))]
@@ -250,6 +254,241 @@ class XlsxLoader(Loader):
         return sections
 
 
+@register("loader", "notebook")
+class NotebookLoader(Loader):
+    """Jupyter notebooks: one section per cell, code kept in fenced blocks.
+
+    Outputs are dropped — they are usually noise, and often huge.
+    """
+
+    extensions = (".ipynb",)
+
+    def load(self, filename: str, data: bytes) -> list[Section]:
+        try:
+            document = json.loads(data.decode("utf-8", errors="replace"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{filename} is not valid notebook JSON: {exc}") from exc
+        language = (
+            document.get("metadata", {}).get("language_info", {}).get("name")
+            or document.get("metadata", {}).get("kernelspec", {}).get("language")
+            or "python"
+        )
+        stem = PurePath(filename).stem
+        sections: list[Section] = []
+        for index, cell in enumerate(document.get("cells", []), 1):
+            source = cell.get("source", "")
+            text = "".join(source) if isinstance(source, list) else str(source)
+            if not text.strip():
+                continue
+            kind = cell.get("cell_type", "code")
+            body = f"```{language}\n{text.strip()}\n```" if kind == "code" else text.strip()
+            sections.append(Section(f"{stem} > cell {index} ({kind})", body))
+        return sections
+
+
+@register("loader", "email")
+class EmailLoader(Loader):
+    """RFC 822 email (``.eml``): headers as a section, then each text part.
+
+    HTML-only mail is reduced to text by the same tag stripper the EPUB loader uses.
+    """
+
+    extensions = (".eml", ".mbox")
+
+    def load(self, filename: str, data: bytes) -> list[Section]:
+        from email import policy
+        from email.parser import BytesParser
+
+        message = BytesParser(policy=policy.default).parsebytes(data)
+        subject = str(message.get("subject", "") or PurePath(filename).stem)
+        header_lines = [
+            f"{field}: {message.get(field)}"
+            for field in ("From", "To", "Cc", "Date", "Subject")
+            if message.get(field)
+        ]
+        sections = [Section(subject, "\n".join(header_lines))] if header_lines else []
+
+        for part in message.walk() if message.is_multipart() else [message]:
+            content_type = part.get_content_type()
+            if content_type not in ("text/plain", "text/html") or part.get_filename():
+                continue
+            try:
+                body = part.get_content()
+            except (LookupError, ValueError):  # unknown charset or malformed part
+                payload = part.get_payload(decode=True) or b""
+                body = payload.decode("utf-8", errors="replace")
+            if content_type == "text/html":
+                body = strip_tags(body)
+            if body.strip():
+                sections.append(Section(subject, body.strip()))
+        return sections or [Section(subject, data.decode("utf-8", errors="replace"))]
+
+
+# Entity declarations are the lever behind billion-laughs and XXE, so documents
+# that carry one are refused rather than parsed.
+_DOCTYPE = re.compile(rb"<!DOCTYPE[^>]*(\[|ENTITY)", re.I)
+_TAG = re.compile(r"<[^>]+>")
+_SCRIPT_OR_STYLE = re.compile(r"<(script|style)\b.*?</\1>", re.I | re.S)
+_WHITESPACE = re.compile(r"[ \t]*\n\s*\n\s*")
+
+
+def strip_tags(markup: str) -> str:
+    """Reduce markup to readable text without needing an HTML parser installed.
+
+    Block elements become blank lines so the structure a chunker relies on survives.
+    """
+    from html import unescape
+
+    text = _SCRIPT_OR_STYLE.sub(" ", markup)
+    text = re.sub(r"<(?:br|/li|/td)\s*/?>", "\n", text, flags=re.I)
+    text = re.sub(r"</(?:p|div|h\d|tr|section|article|blockquote|table|ul|ol)\s*>", "\n\n", text, flags=re.I)
+    text = _TAG.sub(" ", text)
+    text = unescape(text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"[ \t]*\n[ \t]*", "\n", text)  # no stray spaces hugging a line break
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+@register("loader", "xml")
+class XmlLoader(Loader):
+    """Generic XML: one section per repeated child element, rendered as ``tag: value``.
+
+    Refuses documents containing entity declarations.
+    """
+
+    extensions = (".xml",)
+
+    def __init__(self, rows_per_section: int = 25) -> None:
+        self._rows = rows_per_section
+
+    def load(self, filename: str, data: bytes) -> list[Section]:
+        import xml.etree.ElementTree as ElementTree
+
+        if _DOCTYPE.search(data[:4096]):
+            raise ValueError(f"{filename} declares XML entities, which are not parsed for safety.")
+        try:
+            root = ElementTree.fromstring(data.decode("utf-8", errors="replace"))
+        except ElementTree.ParseError as exc:
+            raise ValueError(f"{filename} is not well-formed XML: {exc}") from exc
+
+        def render(element: Any, depth: int = 0) -> list[str]:
+            lines: list[str] = []
+            tag = str(element.tag).rsplit("}", 1)[-1]
+            value = (element.text or "").strip()
+            if value:
+                lines.append(f"{'  ' * depth}{tag}: {value}")
+            elif len(element):
+                lines.append(f"{'  ' * depth}{tag}:")
+            for attribute, attribute_value in element.attrib.items():
+                lines.append(f"{'  ' * (depth + 1)}@{attribute}: {attribute_value}")
+            for child in element:
+                lines.extend(render(child, depth + 1))
+            return lines
+
+        children = list(root)
+        stem = PurePath(filename).stem
+        if not children:
+            return [Section(stem, "\n".join(render(root)))]
+        sections: list[Section] = []
+        for start in range(0, len(children), self._rows):
+            block = children[start : start + self._rows]
+            body = "\n".join(line for child in block for line in render(child))
+            if body.strip():
+                sections.append(Section(f"{stem} > rows {start + 1}-{start + len(block)}", body))
+        return sections
+
+
+@register("loader", "epub")
+class EpubLoader(Loader):
+    """EPUB e-books: one section per XHTML chapter, in spine order where available."""
+
+    extensions = (".epub",)
+    # Guards against a zip bomb: a book that expands past these limits is refused.
+    MAX_MEMBERS = 2000
+    MAX_BYTES = 80 * 1024 * 1024
+
+    def load(self, filename: str, data: bytes) -> list[Section]:
+        import zipfile
+
+        try:
+            archive = zipfile.ZipFile(io.BytesIO(data))
+        except zipfile.BadZipFile as exc:
+            raise ValueError(f"{filename} is not a readable EPUB: {exc}") from exc
+        with archive:
+            members = [m for m in archive.infolist() if m.filename.lower().endswith((".xhtml", ".html", ".htm"))]
+            if len(archive.infolist()) > self.MAX_MEMBERS:
+                raise ValueError(f"{filename} has too many entries to load safely.")
+            if sum(m.file_size for m in members) > self.MAX_BYTES:
+                raise ValueError(f"{filename} expands to more than {self.MAX_BYTES // 1024 // 1024} MB.")
+
+            sections: list[Section] = []
+            for member in sorted(members, key=lambda m: m.filename):
+                try:
+                    markup = archive.read(member).decode("utf-8", errors="replace")
+                except (zipfile.BadZipFile, OSError) as exc:
+                    log.warning("Skipping %s in %s: %s", member.filename, filename, exc)
+                    continue
+                title = re.search(r"<title[^>]*>(.*?)</title>", markup, re.I | re.S)
+                heading = (title.group(1).strip() if title else PurePath(member.filename).stem)[:120]
+                body = strip_tags(markup)
+                if body:
+                    sections.append(Section(heading, body))
+        return sections
+
+
+@register("loader", "rtf")
+class RtfLoader(Loader):
+    """Rich Text Format: control words stripped, escapes and unicode decoded."""
+
+    extensions = (".rtf",)
+
+    def load(self, filename: str, data: bytes) -> list[Section]:
+        text = data.decode("latin-1", errors="replace")
+        # Drop embedded binary/metadata groups whose content is never prose.
+        text = re.sub(
+            r"\{\\(?:\*\\)?(?:fonttbl|colortbl|stylesheet|info|pict|object)\b[^{}]*(?:\{[^{}]*\}[^{}]*)*\}",
+            " ", text,
+        )
+        text = re.sub(r"\\'([0-9a-fA-F]{2})", lambda m: bytes([int(m.group(1), 16)]).decode("cp1252", "replace"), text)
+        text = re.sub(r"\\u(-?\d+)\s?\??", lambda m: chr(int(m.group(1)) % 65536), text)
+        text = re.sub(r"\\(par|line|page)\b\s?", "\n", text)
+        text = re.sub(r"\\tab\b\s?", "\t", text)
+        text = re.sub(r"\\[a-zA-Z]+-?\d*\s?", " ", text)   # remaining control words
+        text = text.replace("{", " ").replace("}", " ")
+        text = re.sub(r"[ \t]{2,}", " ", text)
+        body = _WHITESPACE.sub("\n\n", text).strip()
+        return [Section(PurePath(filename).stem, body)] if body else []
+
+
+@register("loader", "parquet", requires=["pyarrow"])
+class ParquetLoader(Loader):
+    """Columnar Parquet, rendered as ``column: value`` sentences like the CSV loader."""
+
+    extensions = (".parquet",)
+
+    def __init__(self, rows_per_section: int = 25, max_rows: int = 10_000) -> None:
+        self._rows = rows_per_section
+        self._max_rows = max_rows
+
+    def load(self, filename: str, data: bytes) -> list[Section]:
+        import pyarrow.parquet as parquet
+
+        table = parquet.read_table(io.BytesIO(data))
+        columns = table.column_names
+        records = table.slice(0, self._max_rows).to_pylist()
+        stem = PurePath(filename).stem
+        sections: list[Section] = []
+        for start in range(0, len(records), self._rows):
+            block = records[start : start + self._rows]
+            body = "\n".join(
+                "; ".join(f"{column}: {row[column]}" for column in columns if row.get(column) is not None)
+                for row in block
+            )
+            if body.strip():
+                sections.append(Section(f"{stem} > rows {start + 1}-{start + len(block)}", body))
+        return sections
+
+
 @register("loader", "auto")
 class AutoLoader(Loader):
     """Dispatches on file extension to every other registered loader."""
@@ -280,6 +519,10 @@ SUPPORTED_EXTENSIONS = {
     ".txt", ".log", ".py", ".sql", ".yaml", ".yml", ".ini", ".rst", ".md", ".markdown", ".mdx",
     ".html", ".htm", ".xhtml", ".pdf", ".docx", ".csv", ".tsv", ".json", ".jsonl", ".ndjson",
     ".pptx", ".xlsx", ".xlsm",
+    # Added alongside the loaders below; keep in step with each class's `extensions`.
+    ".ipynb", ".eml", ".mbox", ".xml", ".epub", ".rtf", ".parquet",
+    ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs", ".c", ".h", ".cpp", ".hpp", ".cs",
+    ".rb", ".php", ".sh", ".bash", ".ps1", ".toml", ".cfg", ".tf", ".kt", ".swift", ".scala",
 }
 
 

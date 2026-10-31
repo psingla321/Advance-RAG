@@ -1,4 +1,5 @@
 import { Fragment, useState, type ReactNode } from 'react'
+import { copyText } from '../platform'
 
 function renderInline(text: string, key: string): ReactNode[] {
   return text
@@ -27,7 +28,8 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
         <button
           className="link"
           onClick={() => {
-            navigator.clipboard.writeText(code).then(() => {
+            copyText(code).then((ok) => {
+              if (!ok) return
               setCopied(true)
               setTimeout(() => setCopied(false), 1200)
             })

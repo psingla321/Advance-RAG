@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import re
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -9,13 +8,16 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, Field
 
+from app.api.auth import IDENTIFIER as _IDENTIFIER
+from app.api.auth import Identity, get_identity
+from app.api.auth import parse_groups as _parse_groups
 from app.api.lab import router as lab_router
 from app.api.lab import shutdown_sessions
 from app.bootstrap import Core, build_core
@@ -32,12 +34,18 @@ from app.worker import IngestionWorker
 
 settings = get_settings()
 setup_logging(settings)
-setup_tracing(settings, "nexus-api")
-log = logging.getLogger("nexus.api")
+setup_tracing(settings, "advance-rag-api")
+log = logging.getLogger("advance_rag.api")
 
 SAMPLE_DIR = Path(__file__).resolve().parent.parent / "sample_data"
 SAMPLE_ACL = {"compensation_bands.md": ["hr"]}
-_IDENTIFIER = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+# Defence-in-depth headers for every API response (the UI's nginx sets its own CSP).
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "no-store",
+}
 
 
 @dataclass
@@ -75,7 +83,7 @@ async def lifespan(app: FastAPI):
         worker_task = asyncio.create_task(worker.run(stop))
     if settings.seed_sample_docs:
         await _seed_samples(core)
-    log.info("Nexus API ready (mock LLM: %s, embedded worker: %s)", core.llm.is_mock, settings.run_embedded_worker)
+    log.info("AdvanceRAG API ready (mock LLM: %s, embedded worker: %s)", core.llm.is_mock, settings.run_embedded_worker)
     yield
     stop.set()
     if worker_task:
@@ -90,13 +98,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["Content-Type", "X-Tenant-Id", "X-User-Groups", "X-User-Id", "X-Request-Id"],
+    allow_headers=["Authorization", "Content-Type", "X-Tenant-Id", "X-User-Groups", "X-User-Id", "X-Request-Id"],
     expose_headers=["X-Request-Id", "Retry-After", "X-RateLimit-Remaining"],
 )
 FastAPIInstrumentor.instrument_app(app, excluded_urls="metrics,healthz,readyz")
 
-# The plug-and-play RAG lab: component catalogue, ad-hoc pipelines, evaluation and sweeps.
-app.include_router(lab_router)
+# The plug-and-play RAG lab: component catalogue, ad-hoc pipelines, evaluation, sweeps and
+# the learning playground. Disable with LAB_ENABLED=false on production deployments.
+if settings.lab_enabled:
+    app.include_router(lab_router)
 
 
 @app.middleware("http")
@@ -109,30 +119,9 @@ async def request_context(request: Request, call_next):
     finally:
         request_id_var.reset(token)
     response.headers["X-Request-Id"] = request_id
+    for name, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
     return response
-
-
-@dataclass
-class Identity:
-    tenant_id: str
-    user_id: str
-    groups: list[str]
-
-
-def _parse_groups(raw: str) -> list[str]:
-    groups = sorted({g.strip() for g in raw.split(",") if g.strip()})
-    if not groups or len(groups) > 20 or not all(_IDENTIFIER.match(g) for g in groups):
-        raise HTTPException(400, "Groups must be 1-20 comma-separated identifiers ([A-Za-z0-9_-]).")
-    return groups
-
-
-def get_identity(
-    x_tenant_id: str = Header("demo"), x_user_groups: str = Header("all"), x_user_id: str = Header("anonymous")
-) -> Identity:
-    # Demo identity via headers; in production derive tenant, user and groups from a validated Entra ID token.
-    if not _IDENTIFIER.match(x_tenant_id) or not _IDENTIFIER.match(x_user_id):
-        raise HTTPException(400, "Invalid tenant or user id.")
-    return Identity(x_tenant_id, x_user_id, _parse_groups(x_user_groups))
 
 
 def get_services(request: Request) -> Services:
@@ -186,8 +175,8 @@ async def chat(body: ChatRequest, identity: Identity = Depends(get_identity), se
         token = request_id_var.set(request_id)
         try:
             with tracer.start_as_current_span("chat.request") as span:
-                span.set_attribute("nexus.tenant", identity.tenant_id)
-                span.set_attribute("nexus.conversation_id", conversation_id)
+                span.set_attribute("advance_rag.tenant", identity.tenant_id)
+                span.set_attribute("advance_rag.conversation_id", conversation_id)
                 yield _sse("meta", {"conversation_id": conversation_id, "request_id": request_id,
                                     "trace_id": format(span.get_span_context().trace_id, "032x")})
                 async for mode, chunk in services.engine.graph.astream(state, stream_mode=["updates", "custom"]):
@@ -204,7 +193,7 @@ async def chat(body: ChatRequest, identity: Identity = Depends(get_identity), se
                         if node == "finalize":
                             final = update["final"]
                             final["latency_ms"] = round((time.perf_counter() - state["started_at"]) * 1000, 1)
-                            span.set_attribute("nexus.latency_ms", final["latency_ms"])
+                            span.set_attribute("advance_rag.latency_ms", final["latency_ms"])
                             yield _sse("final", final)
         except Exception:
             log.exception("Chat request failed")
@@ -337,4 +326,5 @@ async def readyz(services: Services = Depends(get_services)):
 @app.get("/api/health")
 async def health(services: Services = Depends(get_services)):
     checks = await _dependency_checks(services)
-    return {"status": "ok" if all(checks.values()) else "degraded", "checks": checks, "mock_llm": settings.use_mock_llm}
+    return {"status": "ok" if all(checks.values()) else "degraded", "checks": checks, "mock_llm": settings.use_mock_llm,
+            "auth_mode": settings.auth_mode, "lab_enabled": settings.lab_enabled}

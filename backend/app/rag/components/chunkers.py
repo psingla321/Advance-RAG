@@ -114,7 +114,7 @@ class RecursiveChunker(Chunker):
 class SentenceChunker(Chunker):
     """Sentence-aligned chunks with sentence overlap — never cuts mid-sentence.
 
-    This is the strategy the production Nexus ingestion pipeline uses.
+    This is the strategy the production AdvanceRAG ingestion pipeline uses.
     """
 
     def __init__(self, max_tokens: int = 350, overlap_sentences: int = 1) -> None:

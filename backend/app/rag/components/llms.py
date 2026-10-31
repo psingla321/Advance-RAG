@@ -305,7 +305,7 @@ class CachedLLM(LLM):
     Configure as ``{"type": "cached", "inner": {"type": "openai"}, "path": ".cache/llm"}``.
     """
 
-    def __init__(self, inner: dict[str, Any] | str, path: str = ".nexus_cache/llm") -> None:
+    def __init__(self, inner: dict[str, Any] | str, path: str = ".advance_rag_cache/llm") -> None:
         from pathlib import Path
 
         from app.rag.registry import build

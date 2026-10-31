@@ -96,8 +96,8 @@ flowchart TB
 | Management group | Subscriptions |
 |---|---|
 | Platform | Connectivity (hubs, Front Door, DNS), Identity, Management (Log Analytics, Sentinel, Grafana) |
-| Landing zones / Corp | `nexus-prod-{region}-{stamp}` (one per stamp), `nexus-shared-prod` (ACR, global Cosmos) |
-| Landing zones / Non-prod | `nexus-dev`, `nexus-test`, `nexus-perf` |
+| Landing zones / Corp | `advance-rag-prod-{region}-{stamp}` (one per stamp), `advance-rag-shared-prod` (ACR, global Cosmos) |
+| Landing zones / Non-prod | `advance-rag-dev`, `advance-rag-test`, `advance-rag-perf` |
 | Sandbox | Experiments |
 
 Azure Policy initiatives: deny public endpoints, enforce CMK where required, allowed regions per residency, diagnostic settings, Defender plans, tag compliance.
